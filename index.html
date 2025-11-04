@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Ten - Maths Practice</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -18,16 +17,17 @@
         // ============================================
         // FIREBASE CONFIGURATION
         // ============================================
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBE4WPAaP1WDsouo7VhWWhsVwOGGQWEdtY",
-    authDomain: "daily-ten.firebaseapp.com",
-    databaseURL: "https://daily-ten-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "daily-ten",
-    storageBucket: "daily-ten.firebasestorage.app",
-    messagingSenderId: "235458085383",
-    appId: "1:235458085383:web:61d02b5d48bb8ce9e7e0a2"
-  };
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBE4WPAaP1WDsouo7VhWWhsVwOGGQWEdtY",
+            authDomain: "daily-ten.firebaseapp.com",
+            databaseURL: "https://daily-ten-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "daily-ten",
+            storageBucket: "daily-ten.firebasestorage.app",
+            messagingSenderId: "235458085383",
+            appId: "1:235458085383:web:61d02b5d48bb8ce9e7e0a2"
+        };
+
         // Initialize Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
@@ -38,7 +38,7 @@
         // APPLICATION STATE
         // ============================================
         let state = {
-            view: 'login', // login, teacher, difficulty-select, student, progress
+            view: 'login',
             questions: { easy: [], medium: [], hard: [] },
             studentUsername: null,
             selectedDifficulty: null,
@@ -68,7 +68,7 @@
 
         async function saveQuestions(level, questions) {
             try {
-                await database.ref(`questions/${level}`).set(questions);
+                await database.ref('questions/' + level).set(questions);
                 state.questions[level] = questions;
             } catch (error) {
                 console.error('Error saving questions:', error);
@@ -78,9 +78,9 @@
 
         async function saveProgress(username, quizData) {
             try {
-                const userRef = database.ref(`progress/${username}`);
+                const userRef = database.ref('progress/' + username);
                 const snapshot = await userRef.once('value');
-                let userData = snapshot.val() || { username, attempts: [] };
+                let userData = snapshot.val() || { username: username, attempts: [] };
                 
                 userData.attempts.push({
                     date: new Date().toISOString(),
@@ -115,11 +115,12 @@
         function generateQuiz(difficulty) {
             const levelQuestions = state.questions[difficulty];
             if (levelQuestions.length < 10) {
-                alert(`You need at least 10 questions in Level ${difficulty === 'easy' ? '1' : difficulty === 'medium' ? '2' : '3'} to generate a quiz.`);
+                const levelNum = difficulty === 'easy' ? '1' : difficulty === 'medium' ? '2' : '3';
+                alert('You need at least 10 questions in Level ' + levelNum + ' to generate a quiz.');
                 return;
             }
             
-            const shuffled = [...levelQuestions].sort(() => Math.random() - 0.5);
+            const shuffled = levelQuestions.slice().sort(() => Math.random() - 0.5);
             state.currentQuiz = shuffled.slice(0, 10);
             state.answers = {};
             state.submitted = false;
@@ -130,7 +131,6 @@
 
         function handleAnswer(questionIndex, answer) {
             state.answers[questionIndex] = answer;
-            render();
         }
 
         async function submitQuiz() {
@@ -169,27 +169,28 @@
             for (let i = 0; i < lines.length; i++) {
                 const parts = lines[i].split('\t');
                 
-                if (i === 0 && (parts[0]?.toLowerCase().includes('question'))) {
+                if (i === 0 && parts[0] && parts[0].toLowerCase().includes('question')) {
                     continue;
                 }
                 
-                if (parts.length >= 7 && parts[0]?.trim()) {
+                if (parts.length >= 7 && parts[0] && parts[0].trim()) {
                     newQuestions.push({
-                        Question: parts[0]?.trim(),
-                        'Option A': parts[1]?.trim(),
-                        'Option B': parts[2]?.trim(),
-                        'Option C': parts[3]?.trim(),
-                        'Option D': parts[4]?.trim(),
-                        Answer: parts[5]?.trim(),
-                        Explanation: parts[6]?.trim(),
-                        Topic: parts[7]?.trim() || 'General'
+                        Question: parts[0].trim(),
+                        'Option A': parts[1].trim(),
+                        'Option B': parts[2].trim(),
+                        'Option C': parts[3].trim(),
+                        'Option D': parts[4].trim(),
+                        Answer: parts[5].trim(),
+                        Explanation: parts[6].trim(),
+                        Topic: (parts[7] || 'General').trim()
                     });
                 }
             }
             
             if (newQuestions.length > 0) {
-                await saveQuestions(level, [...state.questions[level], ...newQuestions]);
-                alert(`Added ${newQuestions.length} questions to Level ${level === 'easy' ? '1' : level === 'medium' ? '2' : '3'}!`);
+                const levelNum = level === 'easy' ? '1' : level === 'medium' ? '2' : '3';
+                await saveQuestions(level, state.questions[level].concat(newQuestions));
+                alert('Added ' + newQuestions.length + ' questions to Level ' + levelNum + '!');
                 render();
             } else {
                 alert('No valid questions found. Make sure your data is tab-separated with at least 7 columns.');
@@ -198,7 +199,7 @@
 
         async function clearLevel(level) {
             try {
-                await database.ref(`questions/${level}`).remove();
+                await database.ref('questions/' + level).remove();
                 state.questions[level] = [];
                 state.showClearConfirm = false;
                 state.clearLevel = null;
@@ -210,518 +211,394 @@
         }
 
         // ============================================
-        // RENDER FUNCTIONS
+        // RENDER FUNCTION
         // ============================================
-        function renderLoginView() {
-            return `
-                <div class="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 md:p-8 flex items-center justify-center">
-                    <div class="max-w-md w-full">
-                        <div class="bg-white rounded-lg shadow-lg p-8">
-                            <h1 class="text-3xl font-bold text-purple-900 mb-2 text-center">Daily Ten</h1>
-                            <p class="text-gray-600 mb-6 text-center">Maths Practice</p>
-                            
-                            <div class="mb-6">
-                                <label class="block text-sm font-medium mb-2">Enter your username:</label>
-                                <input
-                                    type="text"
-                                    id="usernameInput"
-                                    value="${state.usernameInput}"
-                                    placeholder="e.g., Student42, Koala23"
-                                    class="w-full p-3 border rounded-lg text-lg"
-                                    autofocus
-                                />
-                                <p class="text-xs text-gray-500 mt-2">
-                                    Use your assigned username or nickname (no real names needed!)
-                                </p>
-                            </div>
-                            
-                            <button
-                                onclick="state.usernameInput = document.getElementById('usernameInput').value; handleStudentLogin()"
-                                class="w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
-                            >
-                                Start Practicing
-                            </button>
-
-                            <button
-                                onclick="state.view = 'teacher'; render()"
-                                class="w-full mt-4 text-sm text-gray-600 hover:text-gray-900"
-                            >
-                                Teacher Login
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderDifficultySelect() {
-            return `
-                <div class="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 md:p-8">
-                    <div class="max-w-4xl mx-auto">
-                        <div class="bg-white rounded-lg shadow-lg p-6 md:p-8">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h1 class="text-2xl md:text-3xl font-bold text-purple-900">Daily Ten Maths Practice</h1>
-                                    <p class="text-sm text-gray-600">Welcome, ${state.studentUsername}!</p>
-                                </div>
-                                <button
-                                    onclick="state.studentUsername = null; state.view = 'login'; render()"
-                                    class="text-sm text-gray-600 hover:text-gray-900"
-                                >
-                                    Change User
-                                </button>
-                            </div>
-
-                            <h2 class="text-xl font-semibold mb-6 text-center">Choose Your Level</h2>
-                            
-                            <div class="grid md:grid-cols-3 gap-6">
-                                <button
-                                    onclick="generateQuiz('easy')"
-                                    ${state.questions.easy.length < 10 ? 'disabled' : ''}
-                                    class="bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white p-8 rounded-lg shadow-lg transition transform hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
-                                >
-                                    <div class="text-4xl mb-3">1️⃣</div>
-                                    <h3 class="text-2xl font-bold mb-2">Level 1</h3>
-                                    <p class="text-sm">Foundation practice</p>
-                                    <p class="text-xs mt-3 opacity-75">${state.questions.easy.length} questions</p>
-                                </button>
-
-                                <button
-                                    onclick="generateQuiz('medium')"
-                                    ${state.questions.medium.length < 10 ? 'disabled' : ''}
-                                    class="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-300 text-white p-8 rounded-lg shadow-lg transition transform hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
-                                >
-                                    <div class="text-4xl mb-3">2️⃣</div>
-                                    <h3 class="text-2xl font-bold mb-2">Level 2</h3>
-                                    <p class="text-sm">Intermediate practice</p>
-                                    <p class="text-xs mt-3 opacity-75">${state.questions.medium.length} questions</p>
-                                </button>
-
-                                <button
-                                    onclick="generateQuiz('hard')"
-                                    ${state.questions.hard.length < 10 ? 'disabled' : ''}
-                                    class="bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white p-8 rounded-lg shadow-lg transition transform hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed"
-                                >
-                                    <div class="text-4xl mb-3">3️⃣</div>
-                                    <h3 class="text-2xl font-bold mb-2">Level 3</h3>
-                                    <p class="text-sm">Advanced practice</p>
-                                    <p class="text-xs mt-3 opacity-75">${state.questions.hard.length} questions</p>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderTeacherView() {
-            const totalQuestions = state.questions.easy.length + state.questions.medium.length + state.questions.hard.length;
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = '';
             
-            return `
-                <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-                    <div class="max-w-6xl mx-auto">
-                        <div class="bg-white rounded-lg shadow-lg p-8">
-                            <h1 class="text-3xl font-bold text-indigo-900 mb-2">Daily Ten - Teacher Panel</h1>
-                            <p class="text-gray-600 mb-6">Manage question banks and view student progress</p>
-                            
-                            <div class="flex gap-4 mb-8">
-                                <button
-                                    onclick="state.view = 'login'; render()"
-                                    ${totalQuestions < 10 ? 'disabled' : ''}
-                                    class="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-                                >
-                                    🎓 Launch Student Interface
-                                </button>
-                                
-                                <button
-                                    onclick="loadAllProgress().then(() => { state.view = 'progress'; render(); })"
-                                    class="flex-1 bg-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-purple-700 transition"
-                                >
-                                    📊 View Student Progress
-                                </button>
-                            </div>
-
-                            <div class="grid md:grid-cols-4 gap-4 mb-8">
-                                <div class="bg-indigo-50 p-6 rounded-lg">
-                                    <h2 class="text-lg font-semibold text-indigo-900 mb-2">Total Questions</h2>
-                                    <p class="text-4xl font-bold text-indigo-600">${totalQuestions}</p>
-                                </div>
-                                
-                                <div class="bg-green-50 p-6 rounded-lg">
-                                    <h2 class="text-lg font-semibold text-green-900 mb-2">Level 1</h2>
-                                    <p class="text-4xl font-bold text-green-600">${state.questions.easy.length}</p>
-                                </div>
-
-                                <div class="bg-yellow-50 p-6 rounded-lg">
-                                    <h2 class="text-lg font-semibold text-yellow-900 mb-2">Level 2</h2>
-                                    <p class="text-4xl font-bold text-yellow-600">${state.questions.medium.length}</p>
-                                </div>
-
-                                <div class="bg-red-50 p-6 rounded-lg">
-                                    <h2 class="text-lg font-semibold text-red-900 mb-2">Level 3</h2>
-                                    <p class="text-4xl font-bold text-red-600">${state.questions.hard.length}</p>
-                                </div>
-                            </div>
-
-                            ${renderQuestionBanks()}
-                        </div>
-                    </div>
-                    ${state.showClearConfirm ? renderClearConfirm() : ''}
-                </div>
-            `;
-        }
-
-        function renderQuestionBanks() {
-            const levels = ['easy', 'medium', 'hard'];
-            return levels.map((level, index) => `
-                <div class="border-t pt-6 mb-6">
-                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                        ${index === 0 ? '1️⃣' : index === 1 ? '2️⃣' : '3️⃣'}
-                        Level ${index + 1} Questions (${state.questions[level].length})
-                    </h3>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-2">
-                                Add Questions to Level ${index + 1}
-                            </label>
-                            <textarea
-                                id="questionInput-${level}"
-                                placeholder="Paste Level ${index + 1} questions here (Tab separated):\\nQuestion\\tOption A\\tOption B\\tOption C\\tOption D\\tAnswer\\tExplanation\\tTopic"
-                                class="w-full h-32 p-3 border rounded-lg mb-3 font-mono text-sm"
-                            ></textarea>
-                            <button
-                                onclick="addQuestionsFromText('${level}', document.getElementById('questionInput-${level}').value); document.getElementById('questionInput-${level}').value = ''"
-                                class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
-                            >
-                                Add Questions
-                            </button>
-                        </div>
-
-                        <div>
-                            <h4 class="text-sm font-semibold mb-2">Preview (first 5)</h4>
-                            <div class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-                                ${state.questions[level].length === 0 ? `
-                                    <p class="text-gray-500 text-center py-4 text-sm">No Level ${index + 1} questions yet</p>
-                                ` : `
-                                    <div class="space-y-2">
-                                        ${state.questions[level].slice(0, 5).map((q, idx) => `
-                                            <div class="bg-white p-2 rounded border text-sm">
-                                                <p class="font-semibold">${idx + 1}. ${q.Question}</p>
-                                                <p class="text-xs text-gray-600 mt-1">
-                                                    Topic: ${q.Topic || 'General'} | Answer: ${q.Answer}
-                                                </p>
-                                            </div>
-                                        `).join('')}
-                                        ${state.questions[level].length > 5 ? `
-                                            <p class="text-xs text-gray-500 text-center">
-                                                ...and ${state.questions[level].length - 5} more
-                                            </p>
-                                        ` : ''}
-                                    </div>
-                                `}
-                            </div>
-                        </div>
-
-                        <button
-                            onclick="state.clearLevel = '${level}'; state.showClearConfirm = true; render()"
-                            class="text-red-600 text-sm hover:underline"
-                        >
-                            Clear Level ${index + 1} Questions
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderClearConfirm() {
-            const levelNum = state.clearLevel === 'easy' ? '1' : state.clearLevel === 'medium' ? '2' : '3';
-            return `
-                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-                        <h3 class="text-xl font-bold text-red-600 mb-3">
-                            Clear Level ${levelNum} Questions?
-                        </h3>
-                        <p class="text-gray-700 mb-6">
-                            This will permanently delete all ${state.questions[state.clearLevel].length} Level ${levelNum} questions. This action cannot be undone.
-                        </p>
-                        <div class="flex gap-3">
-                            <button
-                                onclick="state.showClearConfirm = false; state.clearLevel = null; render()"
-                                class="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 font-medium"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onclick="clearLevel(state.clearLevel)"
-                                class="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 font-medium"
-                            >
-                                Yes, Delete All
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderProgressView() {
-            return `
-                <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-                    <div class="max-w-6xl mx-auto">
-                        <div class="bg-white rounded-lg shadow-lg p-8">
-                            <div class="flex justify-between items-center mb-6">
-                                <h1 class="text-3xl font-bold text-indigo-900">Student Progress</h1>
-                                <button
-                                    onclick="state.view = 'teacher'; render()"
-                                    class="text-gray-600 hover:text-gray-900"
-                                >
-                                    ← Back to Teacher Panel
-                                </button>
-                            </div>
-
-                            ${state.studentProgress.length === 0 ? `
-                                <div class="text-center py-12">
-                                    <p class="text-gray-500 text-lg">No student activity yet</p>
-                                    <p class="text-gray-400 text-sm mt-2">Student progress will appear here once they complete quizzes</p>
-                                </div>
-                            ` : `
-                                <div class="space-y-4">
-                                    ${state.studentProgress.map((student) => {
-                                        const totalAttempts = student.attempts.length;
-                                        const avgScore = student.attempts.reduce((sum, a) => sum + a.score, 0) / totalAttempts;
-                                        const lastAttempt = student.attempts[student.attempts.length - 1];
-                                        const bestScore = Math.max(...student.attempts.map(a => a.score));
-                                        
-                                        return `
-                                            <div class="border rounded-lg p-4 hover:shadow-md transition">
-                                                <div class="flex justify-between items-start mb-3">
-                                                    <div>
-                                                        <h3 class="text-lg font-bold text-indigo-900">${student.username}</h3>
-                                                        <p class="text-sm text-gray-600">
-                                                            ${totalAttempts} quiz${totalAttempts !== 1 ? 'zes' : ''} completed
-                                                        </p>
-                                                    </div>
-                                                    <div class="text-right">
-                                                        <p class="text-2xl font-bold text-indigo-600">
-                                                            ${avgScore.toFixed(1)}/10
-                                                        </p>
-                                                        <p class="text-xs text-gray-500">average</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                                    <div class="bg-gray-50 p-2 rounded">
-                                                        <p class="text-gray-600 text-xs">Last attempt</p>
-                                                        <p class="font-semibold">
-                                                            ${new Date(lastAttempt.date).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                    <div class="bg-gray-50 p-2 rounded">
-                                                        <p class="text-gray-600 text-xs">Last score</p>
-                                                        <p class="font-semibold">${lastAttempt.score}/10</p>
-                                                    </div>
-                                                    <div class="bg-gray-50 p-2 rounded">
-                                                        <p class="text-gray-600 text-xs">Last level</p>
-                                                        <p class="font-semibold">
-                                                            Level ${lastAttempt.level === 'easy' ? '1' : lastAttempt.level === 'medium' ? '2' : '3'}
-                                                        </p>
-                                                    </div>
-                                                    <div class="bg-gray-50 p-2 rounded">
-                                                        <p class="text-gray-600 text-xs">Best score</p>
-                                                        <p class="font-semibold">${bestScore}/10</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <details class="mt-3">
-                                                    <summary class="text-sm text-indigo-600 cursor-pointer hover:text-indigo-800">
-                                                        View all attempts
-                                                    </summary>
-                                                    <div class="mt-2 space-y-1 max-h-40 overflow-y-auto">
-                                                        ${student.attempts.map((attempt) => `
-                                                            <div class="text-sm bg-gray-50 p-2 rounded flex justify-between">
-                                                                <span>${new Date(attempt.date).toLocaleString()}</span>
-                                                                <span>Level ${attempt.level === 'easy' ? '1' : attempt.level === 'medium' ? '2' : '3'}</span>
-                                                                <span class="font-semibold">${attempt.score}/10</span>
-                                                            </div>
-                                                        `).join('')}
-                                                    </div>
-                                                </details>
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            `}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderStudentQuiz() {
-            const levelDisplay = state.selectedDifficulty === 'easy' ? '1️⃣ Level 1' : 
-                                state.selectedDifficulty === 'medium' ? '2️⃣ Level 2' : '3️⃣ Level 3';
-            
-            if (!state.submitted) {
-                return `
-                    <div class="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 md:p-8">
-                        <div class="max-w-4xl mx-auto">
-                            <div class="bg-white rounded-lg shadow-lg p-6 md:p-8">
-                                <div class="flex justify-between items-center mb-6">
-                                    <div>
-                                        <h1 class="text-2xl md:text-3xl font-bold text-purple-900">Daily Ten</h1>
-                                        <p class="text-sm text-gray-600">${state.studentUsername} • ${levelDisplay}</p>
-                                    </div>
-                                    <button
-                                        onclick="state.view = 'difficulty-select'; render()"
-                                        class="text-sm text-gray-600 hover:text-gray-900"
-                                    >
-                                        ← Back
-                                    </button>
-                                </div>
-
-                                <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-lg mb-6 text-center">
-                                    <h2 class="text-3xl font-bold mb-2">Your Score</h2>
-                                    <p class="text-5xl font-bold">${state.score} / 10</p>
-                                    <p class="text-xl mt-2">${state.score >= 8 ? '🌟 Excellent!' : state.score >= 6 ? '👍 Good job!' : '💪 Keep practicing!'}</p>
-                                </div>
-
-                                <h3 class="text-xl font-semibold mb-4">Review Your Answers</h3>
-                                
-                                <div class="space-y-4">
-                                    ${state.currentQuiz.map((q, idx) => {
-                                        const isCorrect = state.answers[idx] === q.Answer;
-                                        return `
-                                            <div class="border-2 rounded-lg p-4 ${isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}">
-                                                <p class="font-semibold mb-2">${idx + 1}. ${q.Question}</p>
-                                                
-                                                <p class="mb-2">
-                                                    <span class="font-medium">Your answer:</span>
-                                                    <span class="${isCorrect ? 'text-green-700' : 'text-red-700'}">
-                                                        ${state.answers[idx] || 'Not answered'} ${isCorrect ? '✓' : '✗'}
-                                                    </span>
-                                                </p>
-                                                
-                                                ${!isCorrect ? `
-                                                    <p class="mb-2">
-                                                        <span class="font-medium text-green-700">Correct answer:</span>
-                                                        ${q.Answer}. ${q[`Option ${q.Answer}`]}
-                                                    </p>
-                                                    
-                                                    <div class="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
-                                                        <p class="font-medium text-blue-900 mb-1">How to solve:</p>
-                                                        <p class="text-sm text-blue-800">${q.Explanation}</p>
-                                                    </div>
-                                                ` : ''}
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-
-                                <div class="flex gap-4 mt-6">
-                                    <button
-                                        onclick="generateQuiz('${state.selectedDifficulty}')"
-                                        class="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700"
-                                    >
-                                        Try Another Quiz
-                                    </button>
-                                    <button
-                                        onclick="state.view = 'difficulty-select'; render()"
-                                        class="flex-1 bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700"
-                                    >
-                                        Change Level
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+            if (state.view === 'login') {
+                renderLoginView(app);
+            } else if (state.view === 'difficulty-select') {
+                renderDifficultySelect(app);
+            } else if (state.view === 'teacher') {
+                renderTeacherView(app);
+            } else if (state.view === 'progress') {
+                renderProgressView(app);
+            } else if (state.view === 'student') {
+                renderStudentQuiz(app);
             }
         }
 
-        function render() {
-            const app = document.getElementById('app');
+        function renderLoginView(container) {
+            const div = document.createElement('div');
+            div.className = 'min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 md:p-8 flex items-center justify-center';
             
-            switch(state.view) {
-                case 'login':
-                    app.innerHTML = renderLoginView();
-                    break;
-                case 'difficulty-select':
-                    app.innerHTML = renderDifficultySelect();
-                    break;
-                case 'teacher':
-                    app.innerHTML = renderTeacherView();
-                    break;
-                case 'progress':
-                    app.innerHTML = renderProgressView();
-                    break;
-                case 'student':
-                    app.innerHTML = renderStudentQuiz();
-                    break;
+            div.innerHTML = '<div class="max-w-md w-full">' +
+                '<div class="bg-white rounded-lg shadow-lg p-8">' +
+                '<h1 class="text-3xl font-bold text-purple-900 mb-2 text-center">Daily Ten</h1>' +
+                '<p class="text-gray-600 mb-6 text-center">Maths Practice</p>' +
+                '<div class="mb-6">' +
+                '<label class="block text-sm font-medium mb-2">Enter your username:</label>' +
+                '<input type="text" id="usernameInput" value="" placeholder="e.g., Student42, Koala23" class="w-full p-3 border rounded-lg text-lg" autofocus />' +
+                '<p class="text-xs text-gray-500 mt-2">Use your assigned username or nickname (no real names needed!)</p>' +
+                '</div>' +
+                '<button id="loginBtn" class="w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition">Start Practicing</button>' +
+                '<button id="teacherBtn" class="w-full mt-4 text-sm text-gray-600 hover:text-gray-900">Teacher Login</button>' +
+                '</div></div>';
+            
+            container.appendChild(div);
+            
+            document.getElementById('loginBtn').onclick = function() {
+                state.usernameInput = document.getElementById('usernameInput').value;
+                handleStudentLogin();
+            };
+            
+            document.getElementById('usernameInput').onkeypress = function(e) {
+                if (e.key === 'Enter') {
+                    state.usernameInput = document.getElementById('usernameInput').value;
+                    handleStudentLogin();
+                }
+            };
+            
+            document.getElementById('teacherBtn').onclick = function() {
+                state.view = 'teacher';
+                render();
+            };
+        }
+
+        function renderDifficultySelect(container) {
+            const div = document.createElement('div');
+            div.className = 'min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 md:p-8';
+            
+            const levelData = [
+                { key: 'easy', num: '1', emoji: '1️⃣', color: 'green', desc: 'Foundation practice' },
+                { key: 'medium', num: '2', emoji: '2️⃣', color: 'yellow', desc: 'Intermediate practice' },
+                { key: 'hard', num: '3', emoji: '3️⃣', color: 'red', desc: 'Advanced practice' }
+            ];
+            
+            let html = '<div class="max-w-4xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-6 md:p-8">' +
+                '<div class="flex justify-between items-center mb-6">' +
+                '<div><h1 class="text-2xl md:text-3xl font-bold text-purple-900">Daily Ten Maths Practice</h1>' +
+                '<p class="text-sm text-gray-600">Welcome, ' + state.studentUsername + '!</p></div>' +
+                '<button id="changeUserBtn" class="text-sm text-gray-600 hover:text-gray-900">Change User</button></div>' +
+                '<h2 class="text-xl font-semibold mb-6 text-center">Choose Your Level</h2>' +
+                '<div class="grid md:grid-cols-3 gap-6">';
+            
+            levelData.forEach(function(level) {
+                const disabled = state.questions[level.key].length < 10;
+                html += '<button id="level-' + level.key + '" ' + (disabled ? 'disabled' : '') +
+                    ' class="bg-' + level.color + '-500 hover:bg-' + level.color + '-600 disabled:bg-gray-300 text-white p-8 rounded-lg shadow-lg transition transform hover:scale-105 disabled:hover:scale-100 disabled:cursor-not-allowed">' +
+                    '<div class="text-4xl mb-3">' + level.emoji + '</div>' +
+                    '<h3 class="text-2xl font-bold mb-2">Level ' + level.num + '</h3>' +
+                    '<p class="text-sm">' + level.desc + '</p>' +
+                    '<p class="text-xs mt-3 opacity-75">' + state.questions[level.key].length + ' questions</p>' +
+                    '</button>';
+            });
+            
+            html += '</div></div></div>';
+            div.innerHTML = html;
+            container.appendChild(div);
+            
+            document.getElementById('changeUserBtn').onclick = function() {
+                state.studentUsername = null;
+                state.view = 'login';
+                render();
+            };
+            
+            levelData.forEach(function(level) {
+                const btn = document.getElementById('level-' + level.key);
+                if (btn && !btn.disabled) {
+                    btn.onclick = function() { generateQuiz(level.key); };
+                }
+            });
+        }
+
+        function renderTeacherView(container) {
+            const div = document.createElement('div');
+            div.className = 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8';
+            
+            const totalQuestions = state.questions.easy.length + state.questions.medium.length + state.questions.hard.length;
+            
+            let html = '<div class="max-w-6xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-8">' +
+                '<h1 class="text-3xl font-bold text-indigo-900 mb-2">Daily Ten - Teacher Panel</h1>' +
+                '<p class="text-gray-600 mb-6">Manage question banks and view student progress</p>' +
+                '<div class="flex gap-4 mb-8">' +
+                '<button id="launchStudentBtn" ' + (totalQuestions < 10 ? 'disabled' : '') +
+                ' class="flex-1 bg-indigo-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">🎓 Launch Student Interface</button>' +
+                '<button id="viewProgressBtn" class="flex-1 bg-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-purple-700 transition">📊 View Student Progress</button>' +
+                '</div>' +
+                '<div class="grid md:grid-cols-4 gap-4 mb-8">' +
+                '<div class="bg-indigo-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-indigo-900 mb-2">Total Questions</h2><p class="text-4xl font-bold text-indigo-600">' + totalQuestions + '</p></div>' +
+                '<div class="bg-green-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-green-900 mb-2">Level 1</h2><p class="text-4xl font-bold text-green-600">' + state.questions.easy.length + '</p></div>' +
+                '<div class="bg-yellow-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-yellow-900 mb-2">Level 2</h2><p class="text-4xl font-bold text-yellow-600">' + state.questions.medium.length + '</p></div>' +
+                '<div class="bg-red-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-red-900 mb-2">Level 3</h2><p class="text-4xl font-bold text-red-600">' + state.questions.hard.length + '</p></div>' +
+                '</div>';
+            
+            const levels = [
+                { key: 'easy', num: '1', emoji: '1️⃣' },
+                { key: 'medium', num: '2', emoji: '2️⃣' },
+                { key: 'hard', num: '3', emoji: '3️⃣' }
+            ];
+            
+            levels.forEach(function(level) {
+                html += '<div class="border-t pt-6 mb-6">' +
+                    '<h3 class="text-xl font-bold mb-4 flex items-center gap-2">' + level.emoji + ' Level ' + level.num + ' Questions (' + state.questions[level.key].length + ')</h3>' +
+                    '<div class="space-y-4">' +
+                    '<div><label class="block text-sm font-medium mb-2">Add Questions to Level ' + level.num + '</label>' +
+                    '<textarea id="questionInput-' + level.key + '" placeholder="Paste Level ' + level.num + ' questions here (Tab separated)" class="w-full h-32 p-3 border rounded-lg mb-3 font-mono text-sm"></textarea>' +
+                    '<button id="addBtn-' + level.key + '" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">Add Questions</button></div>' +
+                    '<div><h4 class="text-sm font-semibold mb-2">Preview (first 5)</h4>' +
+                    '<div class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">';
+                
+                if (state.questions[level.key].length === 0) {
+                    html += '<p class="text-gray-500 text-center py-4 text-sm">No Level ' + level.num + ' questions yet</p>';
+                } else {
+                    html += '<div class="space-y-2">';
+                    state.questions[level.key].slice(0, 5).forEach(function(q, idx) {
+                        html += '<div class="bg-white p-2 rounded border text-sm">' +
+                            '<p class="font-semibold">' + (idx + 1) + '. ' + q.Question + '</p>' +
+                            '<p class="text-xs text-gray-600 mt-1">Topic: ' + (q.Topic || 'General') + ' | Answer: ' + q.Answer + '</p>' +
+                            '</div>';
+                    });
+                    if (state.questions[level.key].length > 5) {
+                        html += '<p class="text-xs text-gray-500 text-center">...and ' + (state.questions[level.key].length - 5) + ' more</p>';
+                    }
+                    html += '</div>';
+                }
+                
+                html += '</div></div>' +
+                    '<button id="clearBtn-' + level.key + '" class="text-red-600 text-sm hover:underline">Clear Level ' + level.num + ' Questions</button>' +
+                    '</div></div>';
+            });
+            
+            html += '</div></div>';
+            div.innerHTML = html;
+            container.appendChild(div);
+            
+            document.getElementById('launchStudentBtn').onclick = function() {
+                state.view = 'login';
+                render();
+            };
+            
+            document.getElementById('viewProgressBtn').onclick = function() {
+                loadAllProgress().then(function() {
+                    state.view = 'progress';
+                    render();
+                });
+            };
+            
+            levels.forEach(function(level) {
+                document.getElementById('addBtn-' + level.key).onclick = function() {
+                    const text = document.getElementById('questionInput-' + level.key).value;
+                    if (text.trim()) {
+                        addQuestionsFromText(level.key, text);
+                        document.getElementById('questionInput-' + level.key).value = '';
+                    }
+                };
+                
+                document.getElementById('clearBtn-' + level.key).onclick = function() {
+                    state.clearLevel = level.key;
+                    state.showClearConfirm = true;
+                    render();
+                };
+            });
+            
+            if (state.showClearConfirm) {
+                renderClearModal(container);
+            }
+        }
+
+        function renderClearModal(container) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50';
+            
+            const levelNum = state.clearLevel === 'easy' ? '1' : state.clearLevel === 'medium' ? '2' : '3';
+            modal.innerHTML = '<div class="bg-white rounded-lg p-6 max-w-md w-full">' +
+                '<h3 class="text-xl font-bold text-red-600 mb-3">Clear Level ' + levelNum + ' Questions?</h3>' +
+                '<p class="text-gray-700 mb-6">This will permanently delete all ' + state.questions[state.clearLevel].length + ' Level ' + levelNum + ' questions. This action cannot be undone.</p>' +
+                '<div class="flex gap-3">' +
+                '<button id="modalCancel" class="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 font-medium">Cancel</button>' +
+                '<button id="modalConfirm" class="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 font-medium">Yes, Delete All</button>' +
+                '</div></div>';
+            
+            container.appendChild(modal);
+            
+            document.getElementById('modalCancel').onclick = function() {
+                state.showClearConfirm = false;
+                state.clearLevel = null;
+                render();
+            };
+            
+            document.getElementById('modalConfirm').onclick = function() {
+                clearLevel(state.clearLevel);
+            };
+        }
+
+        function renderProgressView(container) {
+            const div = document.createElement('div');
+            div.className = 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8';
+            
+            let html = '<div class="max-w-6xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-8">' +
+                '<div class="flex justify-between items-center mb-6">' +
+                '<h1 class="text-3xl font-bold text-indigo-900">Student Progress</h1>' +
+                '<button id="backBtn" class="text-gray-600 hover:text-gray-900">← Back to Teacher Panel</button>' +
+                '</div>';
+            
+            if (state.studentProgress.length === 0) {
+                html += '<div class="text-center py-12">' +
+                    '<p class="text-gray-500 text-lg">No student activity yet</p>' +
+                    '<p class="text-gray-400 text-sm mt-2">Student progress will appear here once they complete quizzes</p>' +
+                    '</div>';
+            } else {
+                html += '<div class="space-y-4">';
+                state.studentProgress.forEach(function(student) {
+                    const totalAttempts = student.attempts.length;
+                    const avgScore = student.attempts.reduce(function(sum, a) { return sum + a.score; }, 0) / totalAttempts;
+                    const lastAttempt = student.attempts[totalAttempts - 1];
+                    const bestScore = Math.max.apply(null, student.attempts.map(function(a) { return a.score; }));
+                    const lastLevel = lastAttempt.level === 'easy' ? '1' : lastAttempt.level === 'medium' ? '2' : '3';
+                    
+                    html += '<div class="border rounded-lg p-4 hover:shadow-md transition">' +
+                        '<div class="flex justify-between items-start mb-3">' +
+                        '<div><h3 class="text-lg font-bold text-indigo-900">' + student.username + '</h3>' +
+                        '<p class="text-sm text-gray-600">' + totalAttempts + ' quiz' + (totalAttempts !== 1 ? 'zes' : '') + ' completed</p></div>' +
+                        '<div class="text-right"><p class="text-2xl font-bold text-indigo-600">' + avgScore.toFixed(1) + '/10</p>' +
+                        '<p class="text-xs text-gray-500">average</p></div></div>' +
+                        '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">' +
+                        '<div class="bg-gray-50 p-2 rounded"><p class="text-gray-600 text-xs">Last attempt</p><p class="font-semibold">' + new Date(lastAttempt.date).toLocaleDateString() + '</p></div>' +
+                        '<div class="bg-gray-50 p-2 rounded"><p class="text-gray-600 text-xs">Last score</p><p class="font-semibold">' + lastAttempt.score + '/10</p></div>' +
+                        '<div class="bg-gray-50 p-2 rounded"><p class="text-gray-600 text-xs">Last level</p><p class="font-semibold">Level ' + lastLevel + '</p></div>' +
+                        '<div class="bg-gray-50 p-2 rounded"><p class="text-gray-600 text-xs">Best score</p><p class="font-semibold">' + bestScore + '/10</p></div>' +
+                        '</div>' +
+                        '<details class="mt-3"><summary class="text-sm text-indigo-600 cursor-pointer hover:text-indigo-800">View all attempts</summary>' +
+                        '<div class="mt-2 space-y-1 max-h-40 overflow-y-auto">';
+                    
+                    student.attempts.forEach(function(attempt) {
+                        const levelNum = attempt.level === 'easy' ? '1' : attempt.level === 'medium' ? '2' : '3';
+                        html += '<div class="text-sm bg-gray-50 p-2 rounded flex justify-between">' +
+                            '<span>' + new Date(attempt.date).toLocaleString() + '</span>' +
+                            '<span>Level ' + levelNum + '</span>' +
+                            '<span class="font-semibold">' + attempt.score + '/10</span></div>';
+                    });
+                    
+                    html += '</div></details></div>';
+                });
+                html += '</div>';
+            }
+            
+            html += '</div></div>';
+            div.innerHTML = html;
+            container.appendChild(div);
+            
+            document.getElementById('backBtn').onclick = function() {
+                state.view = 'teacher';
+                render();
+            };
+        }
+
+        function renderStudentQuiz(container) {
+            const div = document.createElement('div');
+            div.className = 'min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 md:p-8';
+            
+            const levelDisplay = state.selectedDifficulty === 'easy' ? '1️⃣ Level 1' : 
+                                 state.selectedDifficulty === 'medium' ? '2️⃣ Level 2' : '3️⃣ Level 3';
+            
+            let html = '<div class="max-w-4xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-6 md:p-8">' +
+                '<div class="flex justify-between items-center mb-6">' +
+                '<div><h1 class="text-2xl md:text-3xl font-bold text-purple-900">Daily Ten</h1>' +
+                '<p class="text-sm text-gray-600">' + state.studentUsername + ' • ' + levelDisplay + '</p></div>' +
+                '<button id="backBtn" class="text-sm text-gray-600 hover:text-gray-900">← Back</button></div>';
+            
+            if (!state.submitted) {
+                html += '<p class="text-gray-600 mb-6">Answer all 10 questions and click Submit!</p><div class="space-y-6">';
+                
+                state.currentQuiz.forEach(function(q, idx) {
+                    html += '<div class="border rounded-lg p-4 bg-gray-50">' +
+                        '<p class="font-semibold mb-3">' + (idx + 1) + '. ' + q.Question + '</p>' +
+                        '<div class="space-y-2">';
+                    
+                    ['A', 'B', 'C', 'D'].forEach(function(option) {
+                        const checked = state.answers[idx] === option ? ' checked' : '';
+                        html += '<label class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white cursor-pointer transition">' +
+                            '<input type="radio" name="question-' + idx + '" value="' + option + '"' + checked + ' class="w-4 h-4" onchange="handleAnswer(' + idx + ', \'' + option + '\')" />' +
+                            '<span>' + option + '. ' + q['Option ' + option] + '</span></label>';
+                    });
+                    
+                    html += '</div></div>';
+                });
+                
+                const answerCount = Object.keys(state.answers).length;
+                html += '</div><button id="submitBtn" ' + (answerCount < 10 ? 'disabled' : '') +
+                    ' class="w-full mt-6 bg-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">' +
+                    'Submit Answers</button>';
+            } else {
+                const message = state.score >= 8 ? '🌟 Excellent!' : state.score >= 6 ? '👍 Good job!' : '💪 Keep practicing!';
+                html += '<div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-lg mb-6 text-center">' +
+                    '<h2 class="text-3xl font-bold mb-2">Your Score</h2>' +
+                    '<p class="text-5xl font-bold">' + state.score + ' / 10</p>' +
+                    '<p class="text-xl mt-2">' + message + '</p></div>' +
+                    '<h3 class="text-xl font-semibold mb-4">Review Your Answers</h3><div class="space-y-4">';
+                
+                state.currentQuiz.forEach(function(q, idx) {
+                    const isCorrect = state.answers[idx] === q.Answer;
+                    const borderColor = isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50';
+                    const textColor = isCorrect ? 'text-green-700' : 'text-red-700';
+                    const checkmark = isCorrect ? '✓' : '✗';
+                    
+                    html += '<div class="border-2 rounded-lg p-4 ' + borderColor + '">' +
+                        '<p class="font-semibold mb-2">' + (idx + 1) + '. ' + q.Question + '</p>' +
+                        '<p class="mb-2"><span class="font-medium">Your answer:</span> ' +
+                        '<span class="' + textColor + '">' + (state.answers[idx] || 'Not answered') + ' ' + checkmark + '</span></p>';
+                    
+                    if (!isCorrect) {
+                        html += '<p class="mb-2"><span class="font-medium text-green-700">Correct answer:</span> ' +
+                            q.Answer + '. ' + q['Option ' + q.Answer] + '</p>' +
+                            '<div class="mt-3 p-3 bg-blue-50 rounded border border-blue-200">' +
+                            '<p class="font-medium text-blue-900 mb-1">How to solve:</p>' +
+                            '<p class="text-sm text-blue-800">' + q.Explanation + '</p></div>';
+                    }
+                    
+                    html += '</div>';
+                });
+                
+                html += '</div><div class="flex gap-4 mt-6">' +
+                    '<button id="tryAgainBtn" class="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700">Try Another Quiz</button>' +
+                    '<button id="changeLevelBtn" class="flex-1 bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700">Change Level</button>' +
+                    '</div>';
+            }
+            
+            html += '</div></div>';
+            div.innerHTML = html;
+            container.appendChild(div);
+            
+            document.getElementById('backBtn').onclick = function() {
+                state.view = 'difficulty-select';
+                render();
+            };
+            
+            if (!state.submitted) {
+                const submitBtn = document.getElementById('submitBtn');
+                if (submitBtn) {
+                    submitBtn.onclick = submitQuiz;
+                }
+            } else {
+                document.getElementById('tryAgainBtn').onclick = function() {
+                    generateQuiz(state.selectedDifficulty);
+                };
+                
+                document.getElementById('changeLevelBtn').onclick = function() {
+                    state.view = 'difficulty-select';
+                    render();
+                };
             }
         }
 
         // Initialize app
-        loadQuestions().then(() => {
+        loadQuestions().then(function() {
             state.view = 'login';
             render();
         });
     </script>
 </body>
-</html>-purple-50 to-pink-100 p-4 md:p-8">
-                        <div class="max-w-4xl mx-auto">
-                            <div class="bg-white rounded-lg shadow-lg p-6 md:p-8">
-                                <div class="flex justify-between items-center mb-6">
-                                    <div>
-                                        <h1 class="text-2xl md:text-3xl font-bold text-purple-900">Daily Ten</h1>
-                                        <p class="text-sm text-gray-600">${state.studentUsername} • ${levelDisplay}</p>
-                                    </div>
-                                    <button
-                                        onclick="state.view = 'difficulty-select'; render()"
-                                        class="text-sm text-gray-600 hover:text-gray-900"
-                                    >
-                                        ← Back
-                                    </button>
-                                </div>
-
-                                <p class="text-gray-600 mb-6">Answer all 10 questions and click Submit!</p>
-                                
-                                <div class="space-y-6">
-                                    ${state.currentQuiz.map((q, idx) => `
-                                        <div class="border rounded-lg p-4 bg-gray-50">
-                                            <p class="font-semibold mb-3">${idx + 1}. ${q.Question}</p>
-                                            
-                                            <div class="space-y-2">
-                                                ${['A', 'B', 'C', 'D'].map((option) => `
-                                                    <label class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white cursor-pointer transition">
-                                                        <input
-                                                            type="radio"
-                                                            name="question-${idx}"
-                                                            value="${option}"
-                                                            ${state.answers[idx] === option ? 'checked' : ''}
-                                                            onchange="handleAnswer(${idx}, '${option}')"
-                                                            class="w-4 h-4"
-                                                        />
-                                                        <span>${option}. ${q[`Option ${option}`]}</span>
-                                                    </label>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-
-                                <button
-                                    onclick="submitQuiz()"
-                                    ${Object.keys(state.answers).length < 10 ? 'disabled' : ''}
-                                    class="w-full mt-6 bg-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-                                >
-                                    Submit Answers
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                return `
-                    <div class="min-h-screen bg-gradient-to-br from
-
-
+</html>
