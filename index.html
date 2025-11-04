@@ -140,8 +140,8 @@
             const topics = new Set();
             ['easy', 'medium', 'hard'].forEach(function(level) {
                 state.questions[level].forEach(function(q) {
-                    if (q.Topic && q.Topic !== 'General') {
-                        topics.add(q.Topic);
+                    if (q.Topic && q.Topic.trim() !== '' && q.Topic !== 'General') {
+                        topics.add(q.Topic.trim());
                     }
                 });
             });
@@ -493,10 +493,13 @@
                     const disabled = count < 10;
                     
                     html += '<button id="topic-' + level.key + '-' + topic.replace(/\s+/g, '-') + '" ' +
-                        (disabled ? 'disabled' : '') +
-                        ' class="bg-white border-2 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 disabled:border-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed p-4 rounded-lg transition text-left">' +
-                        '<p class="font-semibold text-indigo-900">' + topic + '</p>' +
-                        '<p class="text-xs text-gray-600 mt-1">' + count + ' question' + (count !== 1 ? 's' : '') + '</p>' +
+                        (disabled ? 'disabled title="Need 10 questions. Currently have ' + count + '"' : '') +
+                        ' class="bg-white border-2 ' + 
+                        (disabled ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed' : 'border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-gray-900') +
+                        ' p-4 rounded-lg transition text-left">' +
+                        '<p class="font-semibold">' + topic + '</p>' +
+                        '<p class="text-xs mt-1">' + count + ' question' + (count !== 1 ? 's' : '') + 
+                        (disabled ? ' (need 10)' : ' ✓') + '</p>' +
                         '</button>';
                 });
                 
