@@ -17,7 +17,6 @@
         // ============================================
         // FIREBASE CONFIGURATION
         // ============================================
-        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBE4WPAaP1WDsouo7VhWWhsVwOGGQWEdtY",
             authDomain: "daily-ten.firebaseapp.com",
@@ -27,6 +26,9 @@
             messagingSenderId: "235458085383",
             appId: "1:235458085383:web:61d02b5d48bb8ce9e7e0a2"
         };
+
+        // TEACHER PASSWORD - CHANGE THIS to something secure!
+        const TEACHER_PASSWORD = "teacher2024";
 
         // Initialize Firebase
         if (!firebase.apps.length) {
@@ -49,7 +51,9 @@
             studentProgress: [],
             showClearConfirm: false,
             clearLevel: null,
-            usernameInput: ''
+            usernameInput: '',
+            teacherAuthenticated: false,
+            teacherPasswordInput: ''
         };
 
         // ============================================
@@ -131,6 +135,7 @@
 
         function handleAnswer(questionIndex, answer) {
             state.answers[questionIndex] = answer;
+            render();
         }
 
         async function submitQuiz() {
@@ -219,11 +224,23 @@
             
             if (state.view === 'login') {
                 renderLoginView(app);
+            } else if (state.view === 'teacher-login') {
+                renderTeacherLogin(app);
             } else if (state.view === 'difficulty-select') {
                 renderDifficultySelect(app);
             } else if (state.view === 'teacher') {
+                if (!state.teacherAuthenticated) {
+                    state.view = 'teacher-login';
+                    render();
+                    return;
+                }
                 renderTeacherView(app);
             } else if (state.view === 'progress') {
+                if (!state.teacherAuthenticated) {
+                    state.view = 'teacher-login';
+                    render();
+                    return;
+                }
                 renderProgressView(app);
             } else if (state.view === 'student') {
                 renderStudentQuiz(app);
@@ -262,7 +279,7 @@
             };
             
             document.getElementById('teacherBtn').onclick = function() {
-                state.view = 'teacher';
+                state.view = 'teacher-login';
                 render();
             };
         }
