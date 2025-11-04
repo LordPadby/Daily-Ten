@@ -14,9 +14,7 @@
     <div id="app"></div>
 
     <script>
-        // ============================================
-        // FIREBASE CONFIGURATION
-        // ============================================
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBE4WPAaP1WDsouo7VhWWhsVwOGGQWEdtY",
             authDomain: "daily-ten.firebaseapp.com",
@@ -27,7 +25,7 @@
             appId: "1:235458085383:web:61d02b5d48bb8ce9e7e0a2"
         };
 
-        // TEACHER PASSWORD - CHANGE THIS to something secure!
+        // TEACHER PASSWORD - CHANGE THIS!
         const TEACHER_PASSWORD = "teacher2024";
 
         // Initialize Firebase
@@ -36,9 +34,7 @@
         }
         const database = firebase.database();
 
-        // ============================================
-        // APPLICATION STATE
-        // ============================================
+        // Application State
         let state = {
             view: 'login',
             questions: { easy: [], medium: [], hard: [] },
@@ -52,13 +48,10 @@
             showClearConfirm: false,
             clearLevel: null,
             usernameInput: '',
-            teacherAuthenticated: false,
-            teacherPasswordInput: ''
+            teacherAuthenticated: false
         };
 
-        // ============================================
-        // FIREBASE FUNCTIONS
-        // ============================================
+        // Firebase Functions
         async function loadQuestions() {
             try {
                 const snapshot = await database.ref('questions').once('value');
@@ -113,9 +106,31 @@
             }
         }
 
-        // ============================================
-        // APP FUNCTIONS
-        // ============================================
+        async function deleteStudentProgress(username) {
+            try {
+                await database.ref('progress/' + username).remove();
+                await loadAllProgress();
+                render();
+            } catch (error) {
+                console.error('Error deleting student:', error);
+                alert('Error deleting student data.');
+            }
+        }
+
+        async function clearLevel(level) {
+            try {
+                await database.ref('questions/' + level).remove();
+                state.questions[level] = [];
+                state.showClearConfirm = false;
+                state.clearLevel = null;
+                render();
+            } catch (error) {
+                console.error('Error clearing questions:', error);
+                alert('Error clearing questions.');
+            }
+        }
+
+        // App Functions
         function generateQuiz(difficulty) {
             const levelQuestions = state.questions[difficulty];
             if (levelQuestions.length < 10) {
@@ -124,7 +139,7 @@
                 return;
             }
             
-            const shuffled = levelQuestions.slice().sort(() => Math.random() - 0.5);
+            const shuffled = levelQuestions.slice().sort(function() { return Math.random() - 0.5; });
             state.currentQuiz = shuffled.slice(0, 10);
             state.answers = {};
             state.submitted = false;
@@ -140,7 +155,7 @@
 
         async function submitQuiz() {
             let correctCount = 0;
-            state.currentQuiz.forEach((q, idx) => {
+            state.currentQuiz.forEach(function(q, idx) {
                 if (state.answers[idx] === q.Answer) {
                     correctCount++;
                 }
@@ -202,22 +217,7 @@
             }
         }
 
-        async function clearLevel(level) {
-            try {
-                await database.ref('questions/' + level).remove();
-                state.questions[level] = [];
-                state.showClearConfirm = false;
-                state.clearLevel = null;
-                render();
-            } catch (error) {
-                console.error('Error clearing questions:', error);
-                alert('Error clearing questions.');
-            }
-        }
-
-        // ============================================
-        // RENDER FUNCTION
-        // ============================================
+        // Render Functions
         function render() {
             const app = document.getElementById('app');
             app.innerHTML = '';
@@ -257,8 +257,8 @@
                 '<p class="text-gray-600 mb-6 text-center">Maths Practice</p>' +
                 '<div class="mb-6">' +
                 '<label class="block text-sm font-medium mb-2">Enter your username:</label>' +
-                '<input type="text" id="usernameInput" value="" placeholder="e.g., Student42, Koala23" class="w-full p-3 border rounded-lg text-lg" autofocus />' +
-                '<p class="text-xs text-gray-500 mt-2">Use your assigned username or nickname (no real names needed!)</p>' +
+                '<input type="text" id="usernameInput" placeholder="e.g., Student42, Koala23" class="w-full p-3 border rounded-lg text-lg" autofocus />' +
+                '<p class="text-xs text-gray-500 mt-2">Use your assigned username or nickname</p>' +
                 '</div>' +
                 '<button id="loginBtn" class="w-full bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition">Start Practicing</button>' +
                 '<button id="teacherBtn" class="w-full mt-4 text-sm text-gray-600 hover:text-gray-900">Teacher Login</button>' +
@@ -280,6 +280,49 @@
             
             document.getElementById('teacherBtn').onclick = function() {
                 state.view = 'teacher-login';
+                render();
+            };
+        }
+
+        function renderTeacherLogin(container) {
+            const div = document.createElement('div');
+            div.className = 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8 flex items-center justify-center';
+            
+            div.innerHTML = '<div class="max-w-md w-full">' +
+                '<div class="bg-white rounded-lg shadow-lg p-8">' +
+                '<h1 class="text-3xl font-bold text-indigo-900 mb-2 text-center">Teacher Login</h1>' +
+                '<p class="text-gray-600 mb-6 text-center">Enter password to access teacher panel</p>' +
+                '<div class="mb-6">' +
+                '<label class="block text-sm font-medium mb-2">Password:</label>' +
+                '<input type="password" id="teacherPasswordInput" placeholder="Enter teacher password" class="w-full p-3 border rounded-lg text-lg" autofocus />' +
+                '</div>' +
+                '<button id="teacherLoginBtn" class="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">Access Teacher Panel</button>' +
+                '<button id="backToStudentBtn" class="w-full mt-4 text-sm text-gray-600 hover:text-gray-900">← Back to Student Login</button>' +
+                '</div></div>';
+            
+            container.appendChild(div);
+            
+            function attemptLogin() {
+                const password = document.getElementById('teacherPasswordInput').value;
+                if (password === TEACHER_PASSWORD) {
+                    state.teacherAuthenticated = true;
+                    state.view = 'teacher';
+                    render();
+                } else {
+                    alert('Incorrect password. Please try again.');
+                }
+            }
+            
+            document.getElementById('teacherLoginBtn').onclick = attemptLogin;
+            
+            document.getElementById('teacherPasswordInput').onkeypress = function(e) {
+                if (e.key === 'Enter') {
+                    attemptLogin();
+                }
+            };
+            
+            document.getElementById('backToStudentBtn').onclick = function() {
+                state.view = 'login';
                 render();
             };
         }
@@ -398,11 +441,10 @@
                 render();
             };
             
-            document.getElementById('viewProgressBtn').onclick = function() {
-                loadAllProgress().then(function() {
-                    state.view = 'progress';
-                    render();
-                });
+            document.getElementById('viewProgressBtn').onclick = async function() {
+                await loadAllProgress();
+                state.view = 'progress';
+                render();
             };
             
             levels.forEach(function(level) {
@@ -480,8 +522,11 @@
                         '<div class="flex justify-between items-start mb-3">' +
                         '<div><h3 class="text-lg font-bold text-indigo-900">' + student.username + '</h3>' +
                         '<p class="text-sm text-gray-600">' + totalAttempts + ' quiz' + (totalAttempts !== 1 ? 'zes' : '') + ' completed</p></div>' +
+                        '<div class="flex items-center gap-4">' +
                         '<div class="text-right"><p class="text-2xl font-bold text-indigo-600">' + avgScore.toFixed(1) + '/10</p>' +
-                        '<p class="text-xs text-gray-500">average</p></div></div>' +
+                        '<p class="text-xs text-gray-500">average</p></div>' +
+                        '<button onclick="if(confirm(\'Delete all data for ' + student.username + '?\')) { deleteStudentProgress(\'' + student.username + '\'); }" class="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-2 rounded hover:bg-red-50">🗑️ Delete</button>' +
+                        '</div></div>' +
                         '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">' +
                         '<div class="bg-gray-50 p-2 rounded"><p class="text-gray-600 text-xs">Last attempt</p><p class="font-semibold">' + new Date(lastAttempt.date).toLocaleDateString() + '</p></div>' +
                         '<div class="bg-gray-50 p-2 rounded"><p class="text-gray-600 text-xs">Last score</p><p class="font-semibold">' + lastAttempt.score + '/10</p></div>' +
@@ -566,7 +611,9 @@
                     html += '<div class="border-2 rounded-lg p-4 ' + borderColor + '">' +
                         '<p class="font-semibold mb-2">' + (idx + 1) + '. ' + q.Question + '</p>' +
                         '<p class="mb-2"><span class="font-medium">Your answer:</span> ' +
-                        '<span class="' + textColor + '">' + (state.answers[idx] || 'Not answered') + ' ' + checkmark + '</span></p>';
+                        '<span class="' + textColor + '">' + 
+                        (state.answers[idx] ? state.answers[idx] + '. ' + q['Option ' + state.answers[idx]] : 'Not answered') + 
+                        ' ' + checkmark + '</span></p>';
                     
                     if (!isCorrect) {
                         html += '<p class="mb-2"><span class="font-medium text-green-700">Correct answer:</span> ' +
