@@ -173,7 +173,7 @@
         
         function getAllTopics() {
             const topics = new Set();
-            ['easy', 'medium', 'hard'].forEach(function(level) {
+            ['easy', 'medium', 'hard', 'challenge'].forEach(function(level) {
                 state.questions[level].forEach(function(q) {
                     if (q.Topic && q.Topic.trim() !== '' && q.Topic !== 'General') {
                         topics.add(q.Topic.trim());
@@ -225,7 +225,7 @@
             } else {
                 levelQuestions = state.questions[difficulty];
                 if (levelQuestions.length < 10) {
-                    const levelNum = difficulty === 'easy' ? '1' : difficulty === 'medium' ? '2' : '3';
+                    const levelNum = difficulty === 'easy' ? '1' : difficulty === 'medium' ? '2' : difficulty === 'hard' ? '3' : '4';
                     alert('You need at least 10 questions in Level ' + levelNum + ' to generate a quiz.');
                     return;
                 }
@@ -450,7 +450,8 @@
             const levelData = [
                 { key: 'easy', num: '1', emoji: '1️⃣', color: 'green', desc: 'Foundation practice' },
                 { key: 'medium', num: '2', emoji: '2️⃣', color: 'yellow', desc: 'Intermediate practice' },
-                { key: 'hard', num: '3', emoji: '3️⃣', color: 'red', desc: 'Advanced practice' }
+                { key: 'hard', num: '3', emoji: '3️⃣', color: 'red', desc: 'Advanced practice' },
+                { key: 'challenge', num: '4', emoji: '🚀', color: 'purple', desc: 'Expert challenge!' }
             ];
             
             let html = '<div class="max-w-4xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-6 md:p-8">' +
@@ -459,7 +460,7 @@
                 '<p class="text-sm text-gray-600">Welcome, ' + state.studentUsername + '!</p></div>' +
                 '<button id="changeUserBtn" class="text-sm text-gray-600 hover:text-gray-900">Change User</button></div>' +
                 '<h2 class="text-xl font-semibold mb-4 text-center">Choose Your Level</h2>' +
-                '<div class="grid md:grid-cols-3 gap-6 mb-6">';
+                '<div class="grid md:grid-cols-4 gap-4 mb-6">';
             
             levelData.forEach(function(level) {
                 const disabled = state.questions[level.key].length < 10;
@@ -572,7 +573,8 @@
             const levels = [
                 { key: 'easy', num: '1', emoji: '1️⃣' },
                 { key: 'medium', num: '2', emoji: '2️⃣' },
-                { key: 'hard', num: '3', emoji: '3️⃣' }
+                { key: 'hard', num: '3', emoji: '3️⃣' },
+                { key: 'challenge', num: '4', emoji: '🚀' }
             ];
             
             levels.forEach(function(level) {
@@ -627,7 +629,7 @@
             const div = document.createElement('div');
             div.className = 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8';
             
-            const totalQuestions = state.questions.easy.length + state.questions.medium.length + state.questions.hard.length;
+            const totalQuestions = state.questions.easy.length + state.questions.medium.length + state.questions.hard.length + state.questions.challenge.length;
             
             let html = '<div class="max-w-6xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-8">' +
                 '<h1 class="text-3xl font-bold text-indigo-900 mb-2">Daily Ten - Teacher Panel</h1>' +
@@ -638,17 +640,19 @@
                 '<button id="viewProgressBtn" class="bg-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-purple-700 transition">📊 View Student Progress</button>' +
                 '<button id="viewAnalyticsBtn" class="bg-green-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:bg-green-700 transition">📈 Analytics Dashboard</button>' +
                 '</div>' +
-                '<div class="grid md:grid-cols-4 gap-4 mb-8">' +
+                '<div class="grid md:grid-cols-5 gap-4 mb-8">' +
                 '<div class="bg-indigo-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-indigo-900 mb-2">Total Questions</h2><p class="text-4xl font-bold text-indigo-600">' + totalQuestions + '</p></div>' +
                 '<div class="bg-green-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-green-900 mb-2">Level 1</h2><p class="text-4xl font-bold text-green-600">' + state.questions.easy.length + '</p></div>' +
                 '<div class="bg-yellow-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-yellow-900 mb-2">Level 2</h2><p class="text-4xl font-bold text-yellow-600">' + state.questions.medium.length + '</p></div>' +
                 '<div class="bg-red-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-red-900 mb-2">Level 3</h2><p class="text-4xl font-bold text-red-600">' + state.questions.hard.length + '</p></div>' +
+                '<div class="bg-purple-50 p-6 rounded-lg"><h2 class="text-lg font-semibold text-purple-900 mb-2">Level 4</h2><p class="text-4xl font-bold text-purple-600">' + state.questions.challenge.length + '</p></div>' +
                 '</div>';
             
             const levels = [
                 { key: 'easy', num: '1', emoji: '1️⃣' },
                 { key: 'medium', num: '2', emoji: '2️⃣' },
-                { key: 'hard', num: '3', emoji: '3️⃣' }
+                { key: 'hard', num: '3', emoji: '3️⃣' },
+                { key: 'challenge', num: '4', emoji: '🚀' }
             ];
             
             levels.forEach(function(level) {
@@ -772,7 +776,7 @@
                     const avgScore = student.attempts.reduce(function(sum, a) { return sum + a.score; }, 0) / totalAttempts;
                     const lastAttempt = student.attempts[totalAttempts - 1];
                     const bestScore = Math.max.apply(null, student.attempts.map(function(a) { return a.score; }));
-                    const lastLevel = lastAttempt.level === 'easy' ? '1' : lastAttempt.level === 'medium' ? '2' : '3';
+                    const lastLevel = lastAttempt.level === 'easy' ? '1' : lastAttempt.level === 'medium' ? '2' : lastAttempt.level === 'hard' ? '3' : '4';
                     
                     html += '<div class="border rounded-lg p-4 hover:shadow-md transition">' +
                         '<div class="flex justify-between items-start mb-3">' +
@@ -793,7 +797,7 @@
                         '<div class="mt-2 space-y-1 max-h-40 overflow-y-auto">';
                     
                     student.attempts.forEach(function(attempt) {
-                        const levelNum = attempt.level === 'easy' ? '1' : attempt.level === 'medium' ? '2' : '3';
+                        const levelNum = attempt.level === 'easy' ? '1' : attempt.level === 'medium' ? '2' : attempt.level === 'hard' ? '3' : '4';
                         html += '<div class="text-sm bg-gray-50 p-2 rounded flex justify-between">' +
                             '<span>' + new Date(attempt.date).toLocaleString() + '</span>' +
                             '<span>Level ' + levelNum + (attempt.topic ? ' - ' + attempt.topic : '') + '</span>' +
@@ -916,7 +920,8 @@
                     const levels = [
                         { key: 'easy', num: '1', name: 'Level 1' },
                         { key: 'medium', num: '2', name: 'Level 2' },
-                        { key: 'hard', num: '3', name: 'Level 3' }
+                        { key: 'hard', num: '3', name: 'Level 3' },
+                        { key: 'challenge', num: '4', name: 'Level 4' }
                     ];
                     
                     levels.forEach(function(level) {
@@ -988,7 +993,8 @@
             div.className = 'min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 md:p-8';
             
             const levelDisplay = state.selectedDifficulty === 'easy' ? '1️⃣ Level 1' : 
-                                 state.selectedDifficulty === 'medium' ? '2️⃣ Level 2' : '3️⃣ Level 3';
+                                 state.selectedDifficulty === 'medium' ? '2️⃣ Level 2' : 
+                                 state.selectedDifficulty === 'hard' ? '3️⃣ Level 3' : '🚀 Level 4';
             const topicDisplay = state.selectedTopic ? ' - ' + state.selectedTopic : '';
             
             let html = '<div class="max-w-4xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-6 md:p-8">' +
