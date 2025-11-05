@@ -59,7 +59,13 @@
             try {
                 const snapshot = await database.ref('questions').once('value');
                 if (snapshot.exists()) {
-                    state.questions = snapshot.val();
+                    const data = snapshot.val();
+                    state.questions = {
+                        easy: data.easy || [],
+                        medium: data.medium || [],
+                        hard: data.hard || [],
+                        challenge: data.challenge || []
+                    };
                 }
             } catch (error) {
                 console.error('Error loading questions:', error);
