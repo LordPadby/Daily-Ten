@@ -141,9 +141,18 @@
             const mainTopics = new Set();
             
             allTopics.forEach(function(topic) {
+                // Skip if it looks like a question (too long or has question mark)
+                if (topic.length > 50 || topic.includes('?')) {
+                    return;
+                }
+                
                 // Extract main topic (everything before first dash)
                 const mainTopic = topic.includes(' - ') ? topic.split(' - ')[0].trim() : topic;
-                mainTopics.add(mainTopic);
+                
+                // Only add if it's a reasonable length for a topic name
+                if (mainTopic.length <= 30) {
+                    mainTopics.add(mainTopic);
+                }
             });
             
             return Array.from(mainTopics).sort();
